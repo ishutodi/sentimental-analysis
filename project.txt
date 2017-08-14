@@ -1,0 +1,88 @@
+getwd()
+setwd("C:/Users/ISHU/Downloads/demoney")
+tweet<-read.csv("demoney.csv",header =T,stringsAsFactors = F)
+text<-data.frame(tweet$text)
+length(unique(text$tweet.text))
+#length(which(duplicated(text$tweet.text)))
+uniq<-which(unique(text$tweet.text))
+#uniq_tweet<-data.frame(text[!duplicated(text$tweet.text),])
+modi<-data.frame(tweet[!duplicated(tweet$text),"text"])  #removes all duplicated tweets 
+colnames(modi)[1]<-"tweets" #rename of column
+poswords<-scan("C:/Users/ISHU/Downloads/demoney/positive.txt",what="character",comment.char=";")
+negwords<-scan("C:/Users/ISHU/Downloads/demoney/negative.txt",what="character",comment.char=";")
+poswords<-c(poswords,"great","gr8","thanks","thnx","leader")
+negwords<-c(negwords,"fight","fighting","arrest")
+library(stringr)
+score_data<-function(sentence,poswords,negwords,.progress="none")
+{
+  
+  
+  sentence<-gsub('[[:punct:]]', " ",sentence) #removes punctuation
+  sentence<-gsub('[[:cntrl:]]', " ",sentence)  #removes control statements
+  sentence<-gsub('\\d+', " ",sentence)   #removes decimal number
+  sentence<-tolower(sentence)       #all text converted to lower case
+  words_list<-str_split(sentence,'\\s+')  #splits the texts into list of words
+  words<-unlist(words_list)   #converts the list into character
+  pos_matches<-match(words,poswords)
+  neg_matches<-match(words,negwords)
+  pos_matches<-!is.na(pos_matches)
+  neg_matches<-!is.na(neg_matches)
+  pw<-sum(pos_matches)
+  nw<-sum(neg_matches)
+  score<-sum(pos_matches)-sum(neg_matches)
+  if(score > 0)
+  {
+    return("positive")
+  }
+  else if(score < 0)
+  {
+    return("negative")
+  }
+  else if(score==0)
+  {
+    return("neutral")
+  }
+  return(score)
+  
+}
+sentiment<-NULL
+
+for(i in 1:nrow(modi))
+{
+    
+    sentiment<-c(sentiment,score_data(modi[i,"tweets"],poswords,negwords))
+  }
+modi$sentiments<-as.factor(sentiment)
+table(modi$sentiments)
+#rm(tweet$sentiments)
+library(ggplot2)
+qplot(sentiments,data=modi,fill=sentiments)
+
+library(tm)
+text1<-paste(modi$tweet,sep = " ")#concatanes the strings
+str(text1)
+v<-VectorSource(text1) #constructs a source for a vector as i/p
+c<-Corpus(v)#Corpus is just a way to store a collection of documents in a R software readable format.
+#c<-gsub("/"," ",c)
+#c<-gsub("@"," ",c)
+#rm(c)
+c<-tm_map(c,removePunctuation)
+c<-tm_map(c,tolower)
+c<-tm_map(c,removeWords,stopwords("English"))
+c<-tm_map(c,removeWords,stopwords<-c("can","will"))
+c<-tm_map(c,removeNumbers)
+c<-tm_map(c,stripWhitespace)
+c<-tm_map(c,stemDocument,language='english')
+dm<-DocumentTermMatrix(c)
+dm1<-as.matrix(dm)
+sm<-colSums(dm1)
+sm
+srt<-sort(sm,decreasing = F)
+srt
+n<-names(srt)
+n
+d<-data.frame(words=n,frequency=srt)
+d
+library(wordcloud)
+wordcloud(n,srt,min.freq = 20,max.words = 100)
+#savehistory("~/.Rhistory")
